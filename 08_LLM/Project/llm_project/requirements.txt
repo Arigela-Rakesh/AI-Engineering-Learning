@@ -1,0 +1,7 @@
+transformers
+torch
+fastapi
+uvicorn
+requests
+pytest
+httpx

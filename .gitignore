@@ -1,6 +1,23 @@
+# Python
 .venv/
+venv/
 __pycache__/
-*.pyc
+*.py[cod]
 *.pth
 .ipynb_checkpoints/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Node.js / React
+node_modules/
+dist/
+coverage/
+
+# Editor
 .vscode/
