@@ -1,23 +1,78 @@
+
+# =========================
 # Python
+# =========================
 .venv/
 venv/
+env/
 __pycache__/
 *.py[cod]
 *.pth
 .ipynb_checkpoints/
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
+*.egg-info/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
+# =========================
 # Environment variables and secrets
+# =========================
 .env
 .env.*
 !.env.example
+!.env.*.example
 
-# Node.js / React
+# =========================
+# Node.js / React / Vite
+# =========================
 node_modules/
 dist/
 coverage/
+.vite/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
 
-# Editor
+# =========================
+# Model weights and ML artifacts
+# =========================
+models/
+checkpoints/
+*.safetensors
+*.onnx
+*.pt
+*.pth
+*.ckpt
+*.bin
+
+# =========================
+# Vector indexes and generated data
+# =========================
+*.faiss
+*.index
+vector_store/
+faiss_index/
+chroma_db/
+*.pkl
+*.pickle
+
+# =========================
+# Logs and temporary files
+# =========================
+*.log
+tmp/
+temp/
+
+# =========================
+# Editor and operating system
+# =========================
 .vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

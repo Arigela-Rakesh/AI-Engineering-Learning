@@ -1,0 +1,320 @@
+
+SAMPLE COMPANY EMPLOYEE HANDBOOK
+Version 2.0
+
+IMPORTANT NOTICE
+This is fictional sample policy content created for testing a Retrieval-Augmented Generation (RAG) application. It is not an official policy of any real company.
+
+==================================================
+1. ANNUAL LEAVE POLICY
+==================================================
+
+Employees receive 20 days of annual leave per calendar year.
+
+Annual leave requests should be submitted to the manager at least three working days before the planned leave.
+
+Managers review leave requests based on team availability, project deadlines, and business requirements.
+
+Employees should obtain manager approval before taking planned annual leave.
+
+Unused annual leave may be carried forward for up to five days into the next calendar year, subject to company approval.
+
+Employees should check their available leave balance before submitting a request.
+
+==================================================
+2. PRIVILEGE LEAVE POLICY
+==================================================
+
+Privilege leave is intended for planned personal time off, vacations, and other personal commitments.
+
+Employees must submit privilege leave requests through the company's designated leave management system.
+
+Privilege leave should normally be requested at least five working days before the planned leave.
+
+Approval depends on the employee's available leave balance, project commitments, and manager approval.
+
+Employees should coordinate with teammates before taking extended privilege leave.
+
+Privilege leave balances and carry-forward rules must be verified through the applicable HR policy.
+
+==================================================
+3. SICK LEAVE POLICY
+==================================================
+
+Employees who are unable to work because of illness should inform their manager as early as possible.
+
+Employees should record sick leave in the designated leave management system.
+
+For an absence lasting more than two consecutive working days, employees should provide medical documentation if required by the applicable HR policy.
+
+Managers should handle health-related information confidentially.
+
+Employees returning after an extended illness should coordinate with their manager regarding pending work and responsibilities.
+
+The applicable HR policy determines sick leave eligibility and available leave balances.
+
+==================================================
+4. CASUAL LEAVE POLICY
+==================================================
+
+Casual leave may be requested for urgent personal matters and short-notice commitments.
+
+Employees should inform their manager before taking casual leave whenever reasonably possible.
+
+For unexpected emergencies, employees should notify their manager as soon as practical.
+
+Casual leave requests must be recorded in the designated leave management system.
+
+Approval depends on leave eligibility, applicable HR rules, and business requirements.
+
+Employees should not assume that an unapproved absence has been accepted as casual leave.
+
+==================================================
+5. PUBLIC HOLIDAYS AND COMPANY HOLIDAYS
+==================================================
+
+The company publishes a holiday calendar for each applicable office location.
+
+Employees should consult the current holiday calendar to confirm official holidays.
+
+Holiday schedules may differ by country, state, and office location.
+
+Employees assigned to critical projects may occasionally be required to support work on a holiday.
+
+Any holiday work arrangements must be discussed with the manager in advance whenever possible.
+
+Compensatory leave or additional payment for holiday work depends on applicable company policy and local law.
+
+==================================================
+6. WORK FROM HOME POLICY
+==================================================
+
+Employees may work from home up to two days per week, subject to manager approval and team requirements.
+
+Employees must follow their team's agreed working hours while working remotely.
+
+Employees should remain reachable through approved communication tools during working hours.
+
+Employees must protect confidential company information when working outside the office.
+
+Company laptops and other authorized devices should be used according to information security guidelines.
+
+Employees should report technical issues that prevent remote work to the appropriate IT support team.
+
+Working from home does not remove the employee's responsibility to attend required meetings and complete assigned tasks.
+
+==================================================
+7. WORKING HOURS AND ATTENDANCE
+==================================================
+
+Employees must follow the working hours and attendance requirements applicable to their team and location.
+
+Employees should record attendance using the approved attendance management system.
+
+Employees who expect to arrive late or miss working hours should inform their manager.
+
+Meeting attendance and availability should be coordinated with project requirements.
+
+Flexible working arrangements must be approved by the manager where required.
+
+Repeated attendance issues may be reviewed according to the applicable HR policy.
+
+==================================================
+8. INTERNET AND EXPENSE REIMBURSEMENT
+==================================================
+
+The company reimburses eligible internet expenses up to 1500 rupees per month.
+
+Employees must submit valid bills to the finance team through the approved expense management process.
+
+Expense claims should include the required invoice, transaction details, and business justification where applicable.
+
+Employees should submit reimbursement claims within the deadline specified by the finance policy.
+
+Expenses must be genuine, business-related where required, and supported by valid documentation.
+
+Duplicate, altered, or fraudulent expense claims are prohibited.
+
+The finance team reviews submitted claims and may request additional documentation before approval.
+
+==================================================
+9. TRAVEL AND TRANSPORT REIMBURSEMENT
+==================================================
+
+Business travel must be approved by the appropriate manager before booking whenever possible.
+
+Employees should use approved travel booking channels where available.
+
+Travel reimbursement claims must include valid receipts and relevant trip details.
+
+Employees should select reasonable transportation and accommodation options within approved budgets.
+
+Personal expenses are not reimbursable unless explicitly permitted by the applicable policy.
+
+Employees should submit travel claims within the deadline established by the finance team.
+
+==================================================
+10. ONBOARDING AND TRAINING POLICY
+==================================================
+
+New employees must complete onboarding training during their first two weeks.
+
+The manager assigns the required training modules.
+
+Employees should complete mandatory security, compliance, and role-specific training within the assigned deadlines.
+
+Employees should contact their manager or training coordinator if they cannot access a required learning module.
+
+Training completion may be tracked through the company's learning management system.
+
+Employees are encouraged to participate in technical learning and professional development activities.
+
+==================================================
+11. INFORMATION SECURITY AND PASSWORDS
+==================================================
+
+Employees must protect their company accounts and credentials.
+
+Passwords must not be shared with colleagues or external parties.
+
+Employees should use approved multifactor authentication methods where required.
+
+Suspicious emails, unexpected login prompts, and possible phishing attempts should be reported to the security team.
+
+Employees must not upload confidential company information to unauthorized websites or AI tools.
+
+Company data should be stored and shared only through approved systems.
+
+Employees should lock their devices when leaving their workstations unattended.
+
+==================================================
+12. DATA PRIVACY AND CONFIDENTIALITY
+==================================================
+
+Employees must handle personal information and confidential business data according to applicable privacy requirements.
+
+Access to company information should be limited to authorized business purposes.
+
+Employees must not disclose confidential customer information to unauthorized people.
+
+Sensitive documents should be shared only through approved channels.
+
+Employees should report suspected data leaks or unauthorized access to the security or privacy team.
+
+Confidentiality obligations may continue after employment ends, subject to applicable agreements and laws.
+
+==================================================
+13. IT SUPPORT AND EQUIPMENT
+==================================================
+
+Employees should report hardware, software, and network issues through the approved IT service desk.
+
+IT support requests should include a clear description of the problem and any relevant error message.
+
+Employees should not install unauthorized software on company-managed devices.
+
+Company equipment should be used responsibly and protected against loss or damage.
+
+Lost or stolen company devices must be reported to the IT and security teams immediately.
+
+Employees must return company equipment according to the applicable offboarding process.
+
+==================================================
+14. PERFORMANCE AND FEEDBACK
+==================================================
+
+Employees should discuss goals, priorities, and performance expectations with their managers.
+
+Managers may conduct regular feedback discussions to review progress and identify development opportunities.
+
+Employees should communicate project risks and delivery delays as early as possible.
+
+Performance evaluations should follow the company's established review process.
+
+Employees are encouraged to document achievements, completed training, and professional development activities.
+
+Promotion and compensation decisions depend on the applicable company process and eligibility criteria.
+
+==================================================
+15. CODE OF CONDUCT AND PROFESSIONAL BEHAVIOR
+==================================================
+
+Employees are expected to behave respectfully and professionally toward colleagues, customers, and business partners.
+
+Harassment, discrimination, bullying, and retaliation are not acceptable.
+
+Employees should report serious workplace concerns through the designated HR or ethics reporting channels.
+
+Employees must disclose potential conflicts of interest according to company requirements.
+
+Company resources should be used responsibly and for authorized purposes.
+
+Employees are expected to follow applicable laws, company rules, and professional standards.
+
+==================================================
+16. MATERNITY, PATERNITY, AND PARENTAL LEAVE
+==================================================
+
+Employees should contact HR to understand parental leave eligibility and application procedures.
+
+Parental leave entitlements depend on the employee's work location, applicable law, and the official company policy.
+
+Employees should submit the required documentation through the designated HR process.
+
+Employees are encouraged to discuss planned leave and handover arrangements with their managers.
+
+This sample handbook does not specify a fixed number of maternity or paternity leave days.
+
+Employees must consult HR for the applicable entitlement and approval requirements.
+
+==================================================
+17. RESIGNATION AND OFFBOARDING
+==================================================
+
+Employees who plan to resign should submit their resignation through the approved company process.
+
+Notice periods and separation requirements are determined by the employment agreement and applicable company policy.
+
+Employees should coordinate knowledge transfer and pending work with their managers.
+
+Company equipment, access cards, and other assigned assets must be returned during offboarding.
+
+Employees should complete required exit formalities and expense settlements.
+
+System access is handled according to the company's security and offboarding procedures.
+
+==================================================
+18. FREQUENTLY ASKED QUESTIONS
+==================================================
+
+Question: How many annual leave days are provided?
+Answer: Employees receive 20 days of annual leave per calendar year.
+
+Question: How much internet reimbursement is available?
+Answer: Eligible internet expenses can be reimbursed up to 1500 rupees per month, subject to the applicable process.
+
+Question: How many days per week can employees work from home?
+Answer: Employees may work from home up to two days per week, subject to manager approval and team requirements.
+
+Question: When should new employees complete onboarding training?
+Answer: New employees must complete onboarding training during their first two weeks.
+
+Question: Is there a fixed number of maternity leave days in this handbook?
+Answer: No fixed number is specified. Employees must consult HR for the applicable entitlement.
+
+Question: Can employees share their passwords?
+Answer: No. Employees must not share their passwords with colleagues or external parties.
+
+Question: Who approves business travel?
+Answer: The appropriate manager must approve business travel before booking whenever possible.
+
+Question: Where should employees report phishing emails?
+Answer: Employees should report suspicious emails and possible phishing attempts to the security team.
+
+Question: What should employees do if company equipment is stolen?
+Answer: Employees must report lost or stolen company devices to the IT and security teams immediately.
+
+Question: How can employees confirm official holidays?
+Answer: Employees should consult the current holiday calendar for their office location.
+
+END OF SAMPLE HANDBOOK
