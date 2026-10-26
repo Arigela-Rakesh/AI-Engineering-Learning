@@ -1,22 +1,17 @@
+
 import json
-from typing import TypedDict, Annotated
+from typing import Annotated, TypedDict
 
 from langchain_core.messages import (
     HumanMessage,
     SystemMessage,
 )
-
 from langchain_core.tools import tool
 from langchain_ollama import ChatOllama
 
-from langgraph.graph import (
-    StateGraph,
-    START,
-    END,
-)
-
+from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
-from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.prebuilt import ToolNode
 from langgraph.checkpoint.sqlite import SqliteSaver
 
 from rag.rag_pipeline import (
@@ -74,24 +69,20 @@ def search_handbook(question: str) -> str:
     if not results:
         return json.dumps(
             {
-                "context": (
-                    "No relevant handbook information was found."
-                ),
+                "context": "No relevant handbook information was found.",
                 "sources": [],
             },
             ensure_ascii=False,
         )
 
-    sources = []
-
-    for result in results:
-        sources.append(
-            {
-                "chunk_index": result["chunk_index"],
-                "score": result["score"],
-                "excerpt": result["chunk"][:500],
-            }
-        )
+    sources = [
+        {
+            "chunk_index": result["chunk_index"],
+            "score": result["score"],
+            "excerpt": result["chunk"][:500],
+        }
+        for result in results
+    ]
 
     return json.dumps(
         {
@@ -103,13 +94,18 @@ def search_handbook(question: str) -> str:
 
 
 # --------------------------------------------------
-# 4. Configure LLM and tool bindings
+# 4. Configure LLMs
 # --------------------------------------------------
 
 llm = ChatOllama(
     model="llama3.2:3b",
     temperature=0,
 )
+
+# IMPORTANT:
+# This LLM has NO tools bound to it.
+# General-knowledge questions are answered directly.
+general_llm = llm
 
 calculation_tools = [
     add_numbers,
@@ -173,16 +169,47 @@ def is_handbook_question(question: str) -> bool:
 
     normalized_question = question.casefold()
 
-    for keyword in HANDBOOK_KEYWORDS:
-        if keyword in normalized_question:
-            return True
-
-    return False
+    return any(
+        keyword in normalized_question
+        for keyword in HANDBOOK_KEYWORDS
+    )
 
 
 # --------------------------------------------------
-# 6. Chatbot node
+# 6. System prompts
 # --------------------------------------------------
+
+GENERAL_SYSTEM_PROMPT = """
+You are a helpful general-purpose AI assistant.
+
+Answer general-knowledge questions directly using your
+existing knowledge.
+
+Do not call tools or return tool-call JSON.
+For lists, provide a clear, organized answer.
+For calculations, answer simple arithmetic directly.
+If you are uncertain, explain the uncertainty rather
+than inventing facts.
+"""
+
+HANDBOOK_SYSTEM_PROMPT = """
+You are an employee handbook assistant.
+
+Use the search_handbook tool to answer questions about
+company policies, leave, benefits, and reimbursements.
+
+Base handbook answers on the retrieved handbook context.
+Do not invent company policies or details.
+
+If the handbook does not contain relevant information,
+clearly tell the user that the information was not found.
+"""
+
+
+# --------------------------------------------------
+# 7. Chatbot node
+# --------------------------------------------------
+
 def chatbot(state: AgentState):
     latest_question = ""
 
@@ -193,36 +220,56 @@ def chatbot(state: AgentState):
 
     if is_handbook_question(latest_question):
         selected_llm = llm_with_handbook_tools
-        system_prompt = (
-            "Answer questions about company policies using the "
-            "handbook search tool. If the handbook does not contain "
-            "the answer, clearly say so."
-        )
-    else:
+        system_prompt = HANDBOOK_SYSTEM_PROMPT
+
+    elif is_calculation_question(latest_question):
         selected_llm = llm_with_calculation_tools
-        system_prompt = (
-            "You are a helpful general-purpose assistant. "
-            "Answer general-knowledge questions directly using your "
-            "existing knowledge. Do not restrict answers to a handbook. "
-            "The capital of Iceland is Reykjavík. "
-            "Do not call handbook search for general-knowledge questions."
-        )
+        system_prompt = GENERAL_SYSTEM_PROMPT
+
+    else:
+        # General knowledge: plain LLM, no tools.
+        selected_llm = general_llm
+        system_prompt = GENERAL_SYSTEM_PROMPT
 
     response = selected_llm.invoke(
-        [SystemMessage(content=system_prompt)] + state["messages"]
+        [
+            SystemMessage(content=system_prompt),
+            *state["messages"],
+        ]
     )
 
     return {"messages": [response]}
+
+
+def is_calculation_question(question: str) -> bool:
+    """Identify simple arithmetic requests."""
+
+    normalized = question.casefold()
+
+    calculation_terms = (
+        "calculate",
+        "add ",
+        "multiply",
+        "product of",
+        "sum of",
+    )
+
+    return any(
+        term in normalized
+        for term in calculation_terms
+    ) or (
+        "+" in question
+        or "*" in question
+    )
+
+
 # --------------------------------------------------
-# 7. Build graph with separate tool-routing paths
+# 8. Build graph
 # --------------------------------------------------
 
 graph_builder = StateGraph(AgentState)
 
-graph_builder.add_node(
-    "chatbot",
-    chatbot,
-)
+graph_builder.add_node("chatbot", chatbot)
 
 graph_builder.add_node(
     "calculation_tools",
@@ -234,67 +281,88 @@ graph_builder.add_node(
     ToolNode(handbook_tools),
 )
 
-graph_builder.add_edge(
-    START,
-    "chatbot",
-)
+graph_builder.add_edge(START, "chatbot")
 
 
 def route_after_chatbot(state: AgentState):
-    """
-    Route tool calls only to tools available for the
-    latest question.
-    """
+    """Route only valid tool calls to the correct tool node."""
 
-    messages = state["messages"]
+    last_message = state["messages"][-1]
 
-    last_message = messages[-1]
+    tool_calls = getattr(last_message, "tool_calls", None)
 
-    if not getattr(last_message, "tool_calls", None):
+    if not tool_calls:
         return END
 
     latest_question = ""
 
-    for message in reversed(messages):
+    for message in reversed(state["messages"]):
         if isinstance(message, HumanMessage):
             latest_question = str(message.content)
             break
 
-    allowed_tool_names = (
-        {"add_numbers", "multiply_numbers", "search_handbook"}
-        if is_handbook_question(latest_question)
-        else {"add_numbers", "multiply_numbers"}
-    )
-
-    # Validate requested tools before executing them.
-    for tool_call in last_message.tool_calls:
-        if tool_call["name"] not in allowed_tool_names:
-            return END
-
     if is_handbook_question(latest_question):
-        return "handbook_tools"
+        allowed_tools = {
+            "add_numbers",
+            "multiply_numbers",
+            "search_handbook",
+        }
+        destination = "handbook_tools"
 
-    return "calculation_tools"
+    elif is_calculation_question(latest_question):
+        allowed_tools = {
+            "add_numbers",
+            "multiply_numbers",
+        }
+        destination = "calculation_tools"
 
+    else:
+        # A general-knowledge request must not execute tools.
+        return "invalid_tool_call"
+
+    for tool_call in tool_calls:
+        if tool_call["name"] not in allowed_tools:
+            return "invalid_tool_call"
+
+    return destination
+
+
+def reject_invalid_tool_call(state: AgentState):
+    """Return a safe text response if an unexpected tool call occurs."""
+
+    return {
+        "messages": [
+            # The unexpected tool call is not shown as the answer.
+            # A new human-readable response replaces it.
+            # The graph's state still retains its earlier history.
+            SystemMessage(
+                content=(
+                    "The requested operation was not available. "
+                    "Please answer the user's question directly "
+                    "without calling tools."
+                )
+            )
+        ]
+    }
+
+
+graph_builder.add_node(
+    "invalid_tool_call",
+    reject_invalid_tool_call,
+)
 
 graph_builder.add_conditional_edges(
     "chatbot",
     route_after_chatbot,
 )
 
-graph_builder.add_edge(
-    "calculation_tools",
-    "chatbot",
-)
-
-graph_builder.add_edge(
-    "handbook_tools",
-    "chatbot",
-)
+graph_builder.add_edge("calculation_tools", "chatbot")
+graph_builder.add_edge("handbook_tools", "chatbot")
+graph_builder.add_edge("invalid_tool_call", "chatbot")
 
 
 # --------------------------------------------------
-# 8. Persistent SQLite checkpoint
+# 9. Persistent SQLite checkpoint
 # --------------------------------------------------
 
 checkpointer_context = SqliteSaver.from_conn_string(
