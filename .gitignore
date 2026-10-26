@@ -76,3 +76,16 @@ temp/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# SQLite databases and runtime files
+*.sqlite
+*.sqlite3
+*.db
+*-shm
+*-wal
+
+# Generated vector-store artifacts
+**/vector_store/
+**/vector_store_backup/
+*.faiss
+*.index
