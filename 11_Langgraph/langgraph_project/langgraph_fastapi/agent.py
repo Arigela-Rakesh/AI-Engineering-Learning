@@ -1,6 +1,8 @@
-
 import json
+import sys
+from pathlib import Path
 from typing import Annotated, TypedDict
+
 
 from langchain_core.messages import (
     HumanMessage,
@@ -8,21 +10,22 @@ from langchain_core.messages import (
 )
 from langchain_core.tools import tool
 from langchain_ollama import ChatOllama
+from langchain_mcp_adapters.client import MultiServerMCPClient
 
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
-from langgraph.checkpoint.sqlite import SqliteSaver
+
 
 from rag.rag_pipeline import (
     initialize_vector_store,
     retrieve_context,
 )
 
-
 # --------------------------------------------------
 # 1. Define graph state
 # --------------------------------------------------
+
 
 class AgentState(TypedDict):
     messages: Annotated[list, add_messages]
@@ -36,19 +39,8 @@ vector_index, document_chunks = initialize_vector_store()
 
 
 # --------------------------------------------------
-# 3. Define tools
+# 3. Define handbook RAG tool
 # --------------------------------------------------
-
-@tool
-def add_numbers(a: int, b: int) -> int:
-    """Add two integers and return the result."""
-    return a + b
-
-
-@tool
-def multiply_numbers(a: int, b: int) -> int:
-    """Multiply two integers and return the result."""
-    return a * b
 
 
 @tool
@@ -69,20 +61,22 @@ def search_handbook(question: str) -> str:
     if not results:
         return json.dumps(
             {
-                "context": "No relevant handbook information was found.",
+                "context": ("No relevant handbook information was found."),
                 "sources": [],
             },
             ensure_ascii=False,
         )
 
-    sources = [
-        {
-            "chunk_index": result["chunk_index"],
-            "score": result["score"],
-            "excerpt": result["chunk"][:500],
-        }
-        for result in results
-    ]
+    sources = []
+
+    for result in results:
+        sources.append(
+            {
+                "chunk_index": result["chunk_index"],
+                "score": result["score"],
+                "excerpt": result["chunk"][:500],
+            }
+        )
 
     return json.dumps(
         {
@@ -94,7 +88,7 @@ def search_handbook(question: str) -> str:
 
 
 # --------------------------------------------------
-# 4. Configure LLMs
+# 4. Configure Ollama
 # --------------------------------------------------
 
 llm = ChatOllama(
@@ -102,33 +96,119 @@ llm = ChatOllama(
     temperature=0,
 )
 
-# IMPORTANT:
-# This LLM has NO tools bound to it.
-# General-knowledge questions are answered directly.
+# General-knowledge questions use this LLM directly.
+# No tools are bound to this instance.
 general_llm = llm
 
-calculation_tools = [
-    add_numbers,
-    multiply_numbers,
-]
 
-handbook_tools = [
-    add_numbers,
-    multiply_numbers,
-    search_handbook,
-]
+# --------------------------------------------------
+# 5. Configure the MCP calculator client
+# --------------------------------------------------
 
-llm_with_calculation_tools = llm.bind_tools(
-    calculation_tools
-)
+MCP_SERVER_PATH = Path(__file__).parent / "mcp_server" / "server.py"
 
-llm_with_handbook_tools = llm.bind_tools(
-    handbook_tools
+if not MCP_SERVER_PATH.exists():
+    raise FileNotFoundError(f"MCP server file not found: {MCP_SERVER_PATH}")
+
+mcp_client = MultiServerMCPClient(
+    {
+        "calculator": {
+            "transport": "stdio",
+            "command": sys.executable,
+            "args": [str(MCP_SERVER_PATH)],
+        }
+    }
 )
 
 
 # --------------------------------------------------
-# 5. Detect handbook-related questions
+# 6. Asynchronous MCP calculator tool
+# --------------------------------------------------
+
+
+@tool
+async def calculate_via_mcp(
+    a: float,
+    b: float,
+    operation: str,
+) -> str:
+    """
+    Perform arithmetic through the MCP calculator server.
+
+    Supported operations: add, subtract, multiply, divide.
+    """
+
+    if operation not in {
+        "add",
+        "subtract",
+        "multiply",
+        "divide",
+    }:
+        raise ValueError(
+            "Unsupported operation. Use add, subtract, " "multiply, or divide."
+        )
+
+    if operation == "divide" and b == 0:
+        raise ValueError("Cannot divide by zero.")
+
+    # Discover the MCP tools asynchronously.
+    discovered_tools = await mcp_client.get_tools()
+
+    calculate_tool = None
+
+    for discovered_tool in discovered_tools:
+        if discovered_tool.name == "calculate":
+            calculate_tool = discovered_tool
+            break
+
+    if calculate_tool is None:
+        raise RuntimeError(
+            "The MCP calculator server did not expose " "a calculate tool."
+        )
+
+    # Invoke the MCP tool asynchronously.
+    result = await calculate_tool.ainvoke(
+        {
+            "a": a,
+            "b": b,
+            "operation": operation,
+        }
+    )
+
+    # Convert MCP content blocks into readable text.
+    if isinstance(result, list):
+        text_parts = []
+
+        for item in result:
+            if isinstance(item, dict) and "text" in item:
+                text_parts.append(str(item["text"]))
+
+        if text_parts:
+            return "\n".join(text_parts)
+
+    return str(result)
+
+
+# --------------------------------------------------
+# 7. Configure tool-enabled LLMs
+# --------------------------------------------------
+
+calculation_tools = [
+    calculate_via_mcp,
+]
+
+handbook_tools = [
+    calculate_via_mcp,
+    search_handbook,
+]
+
+llm_with_calculation_tools = llm.bind_tools(calculation_tools)
+
+llm_with_handbook_tools = llm.bind_tools(handbook_tools)
+
+
+# --------------------------------------------------
+# 8. Detect handbook-related questions
 # --------------------------------------------------
 
 HANDBOOK_KEYWORDS = (
@@ -169,14 +249,44 @@ def is_handbook_question(question: str) -> bool:
 
     normalized_question = question.casefold()
 
-    return any(
-        keyword in normalized_question
-        for keyword in HANDBOOK_KEYWORDS
-    )
+    for keyword in HANDBOOK_KEYWORDS:
+        if keyword in normalized_question:
+            return True
+
+    return False
 
 
 # --------------------------------------------------
-# 6. System prompts
+# 9. Detect calculation questions
+# --------------------------------------------------
+
+
+def is_calculation_question(question: str) -> bool:
+    """Identify common arithmetic requests."""
+
+    normalized = question.casefold()
+
+    calculation_terms = (
+        "calculate",
+        "add ",
+        "multiply",
+        "multiplied",
+        "subtract",
+        "divided",
+        "divide",
+        "product of",
+        "sum of",
+    )
+
+    for term in calculation_terms:
+        if term in normalized:
+            return True
+
+    return "+" in question or "*" in question or "/" in question
+
+
+# --------------------------------------------------
+# 10. System prompts
 # --------------------------------------------------
 
 GENERAL_SYSTEM_PROMPT = """
@@ -187,7 +297,8 @@ existing knowledge.
 
 Do not call tools or return tool-call JSON.
 For lists, provide a clear, organized answer.
-For calculations, answer simple arithmetic directly.
+For simple arithmetic, answer directly if no calculation
+tool was requested by the application.
 If you are uncertain, explain the uncertainty rather
 than inventing facts.
 """
@@ -203,14 +314,33 @@ Do not invent company policies or details.
 
 If the handbook does not contain relevant information,
 clearly tell the user that the information was not found.
+
+When relevant handbook context is retrieved, answer using
+that context and preserve the source information returned
+by the tool.
+"""
+
+CALCULATION_SYSTEM_PROMPT = """
+You are a helpful assistant with access to an MCP calculator.
+
+Use calculate_via_mcp for arithmetic requests.
+Choose the appropriate operation: add, subtract,
+multiply, or divide.
+
+Do not invent calculator results.
+After the tool returns its result, explain the answer
+clearly to the user.
 """
 
 
 # --------------------------------------------------
-# 7. Chatbot node
+# 11. Asynchronous chatbot node
 # --------------------------------------------------
 
-def chatbot(state: AgentState):
+
+async def chatbot(state: AgentState):
+    """Select the correct LLM configuration for each question."""
+
     latest_question = ""
 
     for message in reversed(state["messages"]):
@@ -224,14 +354,13 @@ def chatbot(state: AgentState):
 
     elif is_calculation_question(latest_question):
         selected_llm = llm_with_calculation_tools
-        system_prompt = GENERAL_SYSTEM_PROMPT
+        system_prompt = CALCULATION_SYSTEM_PROMPT
 
     else:
-        # General knowledge: plain LLM, no tools.
         selected_llm = general_llm
         system_prompt = GENERAL_SYSTEM_PROMPT
 
-    response = selected_llm.invoke(
+    response = await selected_llm.ainvoke(
         [
             SystemMessage(content=system_prompt),
             *state["messages"],
@@ -241,35 +370,16 @@ def chatbot(state: AgentState):
     return {"messages": [response]}
 
 
-def is_calculation_question(question: str) -> bool:
-    """Identify simple arithmetic requests."""
-
-    normalized = question.casefold()
-
-    calculation_terms = (
-        "calculate",
-        "add ",
-        "multiply",
-        "product of",
-        "sum of",
-    )
-
-    return any(
-        term in normalized
-        for term in calculation_terms
-    ) or (
-        "+" in question
-        or "*" in question
-    )
-
-
 # --------------------------------------------------
-# 8. Build graph
+# 12. Build LangGraph
 # --------------------------------------------------
 
 graph_builder = StateGraph(AgentState)
 
-graph_builder.add_node("chatbot", chatbot)
+graph_builder.add_node(
+    "chatbot",
+    chatbot,
+)
 
 graph_builder.add_node(
     "calculation_tools",
@@ -281,11 +391,14 @@ graph_builder.add_node(
     ToolNode(handbook_tools),
 )
 
-graph_builder.add_edge(START, "chatbot")
+graph_builder.add_edge(
+    START,
+    "chatbot",
+)
 
 
 def route_after_chatbot(state: AgentState):
-    """Route only valid tool calls to the correct tool node."""
+    """Route only expected tool calls."""
 
     last_message = state["messages"][-1]
 
@@ -303,74 +416,47 @@ def route_after_chatbot(state: AgentState):
 
     if is_handbook_question(latest_question):
         allowed_tools = {
-            "add_numbers",
-            "multiply_numbers",
+            "calculate_via_mcp",
             "search_handbook",
         }
         destination = "handbook_tools"
 
     elif is_calculation_question(latest_question):
         allowed_tools = {
-            "add_numbers",
-            "multiply_numbers",
+            "calculate_via_mcp",
         }
         destination = "calculation_tools"
 
     else:
-        # A general-knowledge request must not execute tools.
-        return "invalid_tool_call"
+        # General questions should never request tools because
+        # the general-purpose LLM has no tools bound to it.
+        return END
 
     for tool_call in tool_calls:
         if tool_call["name"] not in allowed_tools:
-            return "invalid_tool_call"
+            return END
 
     return destination
 
-
-def reject_invalid_tool_call(state: AgentState):
-    """Return a safe text response if an unexpected tool call occurs."""
-
-    return {
-        "messages": [
-            # The unexpected tool call is not shown as the answer.
-            # A new human-readable response replaces it.
-            # The graph's state still retains its earlier history.
-            SystemMessage(
-                content=(
-                    "The requested operation was not available. "
-                    "Please answer the user's question directly "
-                    "without calling tools."
-                )
-            )
-        ]
-    }
-
-
-graph_builder.add_node(
-    "invalid_tool_call",
-    reject_invalid_tool_call,
-)
 
 graph_builder.add_conditional_edges(
     "chatbot",
     route_after_chatbot,
 )
 
-graph_builder.add_edge("calculation_tools", "chatbot")
-graph_builder.add_edge("handbook_tools", "chatbot")
-graph_builder.add_edge("invalid_tool_call", "chatbot")
-
-
-# --------------------------------------------------
-# 9. Persistent SQLite checkpoint
-# --------------------------------------------------
-
-checkpointer_context = SqliteSaver.from_conn_string(
-    "langgraph_fastapi_memory.sqlite"
+graph_builder.add_edge(
+    "calculation_tools",
+    "chatbot",
 )
 
-checkpointer = checkpointer_context.__enter__()
-
-graph = graph_builder.compile(
-    checkpointer=checkpointer
+graph_builder.add_edge(
+    "handbook_tools",
+    "chatbot",
 )
+
+# --------------------------------------------------
+# 13. Expose graph builder
+# --------------------------------------------------
+
+# The graph is compiled during FastAPI startup,
+# after the asynchronous SQLite checkpointer is opened.

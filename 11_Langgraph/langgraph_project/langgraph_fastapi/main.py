@@ -1,13 +1,27 @@
 import json
 
-from fastapi import FastAPI
+from contextlib import asynccontextmanager
+
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+
+from agent import graph_builder
+from fastapi import FastAPI, Request
 from pydantic import BaseModel, Field
 
 from langchain_core.messages import HumanMessage, ToolMessage
 
-from agent import graph
+
 from fastapi.middleware.cors import CORSMiddleware
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with AsyncSqliteSaver.from_conn_string(
+        "langgraph_fastapi_memory.sqlite"
+    ) as checkpointer:
+        app.state.graph = graph_builder.compile(
+            checkpointer=checkpointer
+        )
+        yield
 
 
 # 1. Create FastAPI application
@@ -15,6 +29,7 @@ app = FastAPI(
     title="LangGraph AI Assistant",
     description="FastAPI integration with LangGraph",
     version="1.0.0",
+    lifespan=lifespan
 )
 
 app.add_middleware(
@@ -94,19 +109,26 @@ def extract_sources(messages):
     return sources
 
 # 4. Create chat endpoint
+# 4. Create chat endpoint
 @app.post("/chat", response_model=ChatResponse)
-def chat(request: ChatRequest) -> ChatResponse:
+async def chat(
+    request: Request,
+    chat_request: ChatRequest,
+) -> ChatResponse:
 
     config = {
         "configurable": {
-            "thread_id": request.thread_id
+            "thread_id": chat_request.thread_id
         }
     }
 
-    result = graph.invoke(
+    # Access the graph compiled during FastAPI startup.
+    request_graph = request.app.state.graph
+
+    result = await request_graph.ainvoke(
         {
             "messages": [
-                HumanMessage(content=request.message)
+                HumanMessage(content=chat_request.message)
             ]
         },
         config=config,
@@ -117,11 +139,11 @@ def chat(request: ChatRequest) -> ChatResponse:
     # Get the final AI response.
     answer = messages[-1].content
 
-    # Extract sources from the latest user turn.
+    # Extract handbook sources from the latest user turn.
     sources = extract_sources(messages)
 
     return {
         "answer": answer,
-        "thread_id": request.thread_id,
+        "thread_id": chat_request.thread_id,
         "sources": sources,
     }
